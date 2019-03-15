@@ -10,14 +10,13 @@ def randomTar(size):
     return r
 
 #定义计算的函数
-def ψ(x):
+def E(x):
     if x>=0.6:
        return math.log(x-0.5)
     elif x<0.6:
-       return -(1/x)+ ψ(1)
+       return -(1/x)+ E(1)
 
 def Ex(x):
-
     return math.exp(x)
 
 def Normalize(vector):
@@ -25,7 +24,13 @@ def Normalize(vector):
     m = np.mean(vector)
     mx = max(vector)
     mn = min(vector)
-    return [(float(i) - m) / (mx - mn) for i in vector]
+
+    dir = mx-mn
+
+    if dir==0:
+        dir=1
+
+    return [(float(i) - m) / (dir) for i in vector]
 
 #计算某一列的和
 def calColSum(w,n):
@@ -43,7 +48,7 @@ def calSomeColSum(w,n):
         sum = sum + w[i][n]
     return sum
 
-data = pd.read_csv("../data/data.dat",sep="\t",names=['userid','itemid','rating','timestamp'])
+data = pd.read_csv("../data/temp.dat",sep="\t",names=['userid','itemid','rating','timestamp'])
 
 film_list = list(set(data['itemid']))
 film_count = len(film_list)
@@ -57,7 +62,7 @@ print(len(film_list))
 var = {}
 var['k'] = 10 #主题个数
 var['v'] = 5  #评分级别数目
-var['iter'] = 1
+var['iter'] = 100
 var['user_count'] = len(user_list)
 var['film_count'] = film_count
 #分布超参数
@@ -120,7 +125,7 @@ if __name__ =="__main__":
    print(β.shape)
    # print(S)
    # print(w_user_film)
-
+   print(γ[0])
 
    for i in range(var['iter']):
        #开始执行E步
@@ -128,7 +133,8 @@ if __name__ =="__main__":
        for u in range(var['user_count']):
            for n in range(len(w_user_film[u])):
                for i in range(var['k']):
-                   Φ[u][n][i] = β[i][w_user_film[u][n]-1]  *  S[i][w_user_film[u][n]-1][w_user_film_score[u][n]-1]  *  Ex(ψ(γ[i]))
+
+                   Φ[u][n][i] = β[i][w_user_film[u][n]-1]  *  S[i][w_user_film[u][n]-1][w_user_film_score[u][n]-1]  *  Ex(E(γ[i]))
                    #Φ[u][n][i] = β[i][w_user_film[u][n] - 1] *  Ex(ψ(γ[i]))
 
                #对Φun进行归一化
@@ -159,8 +165,12 @@ if __name__ =="__main__":
 
 
    print("保存完毕")
-   np.savetxt("../data/Φ.txt",Φ)
+   #np.savetxt("../data/Φ.npy",Φ)
 
 
+
+   res = np.ndarray.tolist(Φ)
+   print(res)
+   print(S)
 
 
