@@ -24,7 +24,7 @@ vars['eta'] = 0.001
 vars['iterations'] = 1000
 vars['gap']=100
 #导入全局数据集
-data = pd.read_table("./data/temp.dat",sep="\t",names=['userid','itemid','rating','timestamp'])
+data = pd.read_table("./data/test.dat",sep="\t",names=['userid','itemid','rating','timestamp'])
 
 #获取电影总数
 vars['film_count'] = len(list(set(data['itemid'])))
