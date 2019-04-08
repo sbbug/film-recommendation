@@ -5,8 +5,8 @@ import numpy as np
 def predict(user_id,topk):
 
     print("加载模型开始预测")
-    film_topic = np.loadtxt("./theta_1.txt")
-    topic_user = np.loadtxt("./phi_1.txt")
+    film_topic = np.loadtxt("./theta_end.txt")
+    topic_user = np.loadtxt("./phi_end.txt")
 
     #获取该用户下的主题分布
     user_topic = topic_user[:,user_id]

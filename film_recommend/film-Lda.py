@@ -21,18 +21,50 @@ vars['K'] = 10
 # vars['K'] = 20
 vars['alpha'] = 1
 vars['eta'] = 0.001
-vars['iterations'] = 1000
+vars['iterations'] = 300
+#每隔多少个迭代步长保存结果
 vars['gap']=100
-#导入全局数据集
-data = pd.read_table("./data/test.dat",sep="\t",names=['userid','itemid','rating','timestamp'])
+#每个时间段内的数据记录数量
+vars['n'] = 10
 
-#获取电影总数
-vars['film_count'] = len(list(set(data['itemid'])))
-#获取用户总数
-vars['user_count'] = len(list(set(data['userid'])))
+
+
+#根据时间片从数据集筛选数据
+def getSliceData(data,times):
+    '''
+    :param data: 数据
+    :param times: 单个时间片
+    :return:
+    '''
+
+    m_in = min(times)
+    m_ax = max(times)
+
+    return data[(data['timestamp']>=m_in)&(data['timestamp']<=m_ax)]
+
+#获取划分好的时间片集合
+def getSliceTime(times,n):
+    '''
+    :param times: 是时间戳集合
+    :param n: 是需要将时间戳分成多少份
+    :return:
+    '''
+    time_slices = []
+    times = sorted(times, reverse=False)
+    dx = len(times) // n
+    for i in range(n):
+
+        start = i * dx
+        end = i * dx + dx
+        if end >= len(times):
+            end = len(times)
+
+        time_slices.append(times[start:end + 1:1])
+    return time_slices
+
 
 #获取用户对电影的评分矩阵
-def getUserFilmScore(film_count,user_count,):
+def getUserFilmScore(film_count,user_count,data):
     data.set_index("rating")
     user_film_score = []
 
@@ -173,7 +205,7 @@ def normalization(data):
     return (data - np.min(data)) / _range
 
 #LDA算法
-def Lda(film_user,film_topic,topic_user,film_user_count,user_film_score,some_user=1):
+def Lda(film_user,film_topic,topic_user,film_user_count,user_film_score,theta_before,phi_before,some_user=1):
 
 
     print(film_user)
@@ -238,12 +270,14 @@ def Lda(film_user,film_topic,topic_user,film_user_count,user_film_score,some_use
     a = addAlp(film_topic,vars['alpha'])
     b = rowSum(a)
     theta = matDivVec(a,b)
+    theta = theta+theta_before
     # print(theta)
 
     #主题用户计算
     a = addAlp(topic_user, vars['eta'])
     b = rowSum(a)
     phi = matDivVec(a, b)
+    phi = phi+phi_before
     # print(phi)
 
     return theta,phi
@@ -259,27 +293,56 @@ def saveData(mat,file):
 
 if __name__ == '__main__':
 
+    # 导入全局数据集
+    data = pd.read_table("./data/test.dat", sep="\t", names=['userid', 'itemid', 'rating', 'timestamp'])
+
+    #获取时间片集合
+    times = list(set(data['timestamp']))
+    times_slice = getSliceTime(times,vars['n'])
+
+    # 获取电影总数
+    vars['film_count'] = len(list(set(data['itemid'])))
+    # 获取用户总数
+    vars['user_count'] = len(list(set(data['userid'])))
+
     #某一个用户
     some_user=1
 
-    print("获取user_film_score")
-    user_film_score = getUserFilmScore(vars['film_count'],vars['user_count'])
+    #定义上一个模型参数
+    theta_before = np.zeros((vars['film_count'],vars['K']))
+    phi_before = np.zeros((vars['K'],vars['user_count']))
+    #迭代每个时间片
+    for i in range(len(times_slice)):
 
-    print("获取user_topic,film_user")
-    topic_user,film_user = getFilmUserAndTopicUserMatrix(vars['film_count'],vars['user_count'],user_film_score)
+        #获取每个时间片下的数据集
+        batch = getSliceData(data,times_slice[i])
 
-    print("获取film_topic")
-    film_topic = getFilmTopicMatrix(vars['film_count'],film_user)
+        print("获取user_film_score")
+        user_film_score = getUserFilmScore(vars['film_count'],vars['user_count'],batch)
 
-    print("开始训练模型")
-    theta,phi = Lda(film_user,film_topic,topic_user,vars['user_count'],user_film_score,some_user)
+        print("获取user_topic,film_user")
+        topic_user,film_user = getFilmUserAndTopicUserMatrix(vars['film_count'],vars['user_count'],user_film_score)
 
-    print("保存训练好的结果")
-    theta = np.array(theta)
-    phi = np.array(phi)
-    np.savetxt("./theta_1.txt",theta)
-    np.savetxt("./phi_1.txt", phi)
-    print("保存模型")
+        print("获取film_topic")
+        film_topic = getFilmTopicMatrix(vars['film_count'],film_user)
+
+        print("开始训练模型")
+        theta,phi = Lda(film_user,film_topic,topic_user,vars['user_count'],user_film_score,theta_before,phi_before,some_user)
+
+        print("保存训练好的结果")
+        theta = np.array(theta)
+        phi = np.array(phi)
+
+        theta_before = theta
+        phi_before = phi
+
+        if i==len(times_slice)-1:
+            np.savetxt("./theta_end.txt",theta)
+            np.savetxt("./phi_end.txt", phi)
+        else:
+            np.savetxt("./theta_" + str(i) + ".txt", theta)
+            np.savetxt("./phi_" + str(i) + ".txt", phi)
+        print("保存模型")
 
     # theta = np.loadtxt("./theta_1.txt")
     # phi = np.loadtxt("./phi_1.txt")

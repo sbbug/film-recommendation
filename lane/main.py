@@ -78,7 +78,7 @@ if __name__ == "__main__":
         edges =  cv2.Canny(frame, 50, 200)
 
         #获取图像mask
-        mask = edges[int(h/2):h,0:w]
+        mask = edges[int(h/4):h,0:w]
         # 经验参数
         minLineLength = 100
         maxLineGap = 5
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         else:
             for line in lines:
                 for x1,y1,x2,y2 in line:
-                    cv2.line(result,(x1,y1+int(h/2)),(x2,y2+int(h/2)),(0,0,255),6)
+                    cv2.line(result,(x1,y1+int(h/4)),(x2,y2+int(h/4)),(0,0,255),6)
 
         #cv2.imshow("edges",edges)
         # out1.write(edges)
